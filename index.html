@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>社區住戶意見反映管理系統</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-main: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            
+            /* 狀態顏色 */
+            --status-processing: #f59e0b;
+            --status-chairman: #3b82f6;
+            --status-committee: #8b5cf6;
+            --status-closed: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 頂部標頭 */
+        header {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            color: white;
+            padding: 20px 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+
+        .api-status {
+            font-size: 14px;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-dot.online {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        /* 卡片通用樣式 */
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1e293b;
+            border-left: 4px solid var(--primary);
+            padding-left: 10px;
+        }
+
+        /* 表單排版 */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        input[type="text"], input[type="tel"], textarea, select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 15px;
+            background-color: #fff;
+            color: var(--text-main);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* 智能輸入過濾選單 (Autocomplete) */
+        .autocomplete-wrapper {
+            position: relative;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 50;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.15s ease;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f1f5f9;
+            color: var(--primary);
+        }
+
+        .autocomplete-no-match {
+            padding: 10px 14px;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        /* 按鈕樣式 */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-primary:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .btn-secondary {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .btn-secondary:hover {
+            background-color: #cbd5e1;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* 條列式表格區塊 */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tbody tr {
+            transition: background-color 0.15s ease;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* 狀態標籤 */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        .badge-processing { background-color: #fef3c7; color: #d97706; }
+        .badge-chairman { background-color: #dbeafe; color: #2563eb; }
+        .badge-committee { background-color: #f3e8ff; color: #7c3aed; }
+        .badge-closed { background-color: #d1fae5; color: #059669; }
+
+        .btn-action {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 4px;
+            background-color: #f1f5f9;
+            border: 1px solid var(--border);
+            color: #334155;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .btn-action:hover {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .truncate {
+            max-width: 250px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 彈出視窗 (Modal) 樣式 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            transform: scale(0.95);
+            transition: transform 0.2s ease;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background-color: #f8fafc;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .info-block {
+            background-color: #f8fafc;
+            padding: 12px 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 6px;
+        }
+        .info-row:last-child { margin-bottom: 0; }
+        
+        .info-label {
+            font-weight: 600;
+            color: var(--text-muted);
+            width: 80px;
+            flex-shrink: 0;
+        }
+
+        /* 提示通知 */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background-color: #334155;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+            z-index: 2000;
+            font-size: 14px;
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- 頂部標頭 -->
+    <header>
+        <h1>社區住戶意見反映管理系統</h1>
+        <div class="api-status">
+            <span id="statusDot" class="status-dot"></span>
+            <span id="statusText">系統載入中...</span>
+        </div>
+    </header>
+
+    <!-- 上半部：案件新增區 -->
+    <section class="card">
+        <div class="card-title">新增意見反映案件</div>
+        <form id="caseForm">
+            <div class="form-grid">
+                <!-- 戶別 (具備自動辨識與防呆) -->
+                <div class="form-group autocomplete-wrapper">
+                    <label for="householdInput">戶別 <span style="color:red">*</span></label>
+                    <input type="text" id="householdInput" placeholder="輸入關鍵字自動辨識 (如: 26號)" autocomplete="off" required>
+                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+                </div>
+
+                <!-- 反映人 -->
+                <div class="form-group">
+                    <label for="reporterInput">反映人 <span style="color:red">*</span></label>
+                    <input type="text" id="reporterInput" placeholder="請輸入姓名/稱呼" required>
+                </div>
+
+                <!-- 連絡電話 -->
+                <div class="form-group">
+                    <label for="phoneInput">連絡電話 <span style="color:red">*</span></label>
+                    <input type="tel" id="phoneInput" placeholder="請輸入聯絡電話" required>
+                </div>
+
+                <!-- 反映事項 -->
+                <div class="form-group full-width">
+                    <label for="contentInput">反映事項 <span style="color:red">*</span></label>
+                    <textarea id="contentInput" placeholder="請詳細錄入電話或口頭反映的具體事項內容..." required></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" id="submitBtn" class="btn btn-primary" disabled>儲存案件</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- 下半部：案件追蹤與管理區 -->
+    <section class="card">
+        <div class="card-title">意見反映案件追蹤總表</div>
+        <div class="table-responsive">
+            <table id="casesTable">
+                <thead>
+                    <tr>
+                        <th>反映時間</th>
+                        <th>戶別</th>
+                        <th>反映人</th>
+                        <th style="width: 30%;">反映事項</th>
+                        <th>進度狀態</th>
+                        <th>最後更新</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="casesTableBody">
+                    <tr>
+                        <td colspan="7" class="loading-spinner">正在自後台連線讀取案件紀錄...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<!-- 案件處理編輯彈出燈箱 (Modal) -->
+<div id="editModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 id="modalTitle">案件進度追蹤處理</h3>
+            <button class="close-modal" id="closeModalBtn">&times;</button>
+        </div>
+        <form id="modalForm">
+            <input type="hidden" id="modalCaseId">
+            <div class="modal-body">
+                <!-- 案件原始資訊唯讀展示 -->
+                <div class="info-block">
+                    <div class="info-row"><span class="info-label">戶別：</span><span id="infoHousehold"></span></div>
+                    <div class="info-row"><span class="info-label">反映人：</span><span id="infoReporter"></span> (<span id="infoPhone"></span>)</div>
+                    <div class="info-row"><span class="info-label">反映事項：</span><span id="infoContent"></span></div>
+                </div>
+
+                <!-- 處理方式紀錄 -->
+                <div class="form-group">
+                    <label for="modalHandling">處理方式紀錄 (可持續追蹤累加)</label>
+                    <textarea id="modalHandling" placeholder="請輸入目前採取的處理步驟、聯絡狀況或交辦進度..."></textarea>
+                </div>
+
+                <!-- 進度選單 -->
+                <div class="form-group">
+                    <label for="modalStatus">進度狀態變更</label>
+                    <select id="modalStatus">
+                        <option value="處理中">處理中</option>
+                        <option value="呈主委">呈主委</option>
+                        <option value="呈管委會">呈管委會</option>
+                        <option value="結案">結案</option>
+                    </select>
+                </div>
+
+                <!-- 案件結論 -->
+                <div class="form-group">
+                    <label for="modalConclusion">案件結論 (結案時之最終處置)</label>
+                    <textarea id="modalConclusion" placeholder="當案件進入「結案」階段時，請務必在此填寫最終辦理結果摘要..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelModalBtn">取消</button>
+                <button type="submit" class="btn btn-primary" id="saveModalBtn">更新紀錄</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- 提示訊息 -->
+<div id="toast" class="toast"></div>
+
+<script>
+    // ==========================================
+    // 請在此處貼上您部署好的 Google Apps Script 網頁應用程式網址
+    // ==========================================
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzmREnC-f9MV42zOG7BZoUTdSu_fta-hsoGINcGrJmh7HwR3yfLW1tesrSkXIlWGwEKew/exec";
+
+    // 狀態全域變數
+    let householdList = []; // 存放 490 戶清單
+    let currentCases = [];   // 存放案件列表
+
+    // DOM 元素選取
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const householdInput = document.getElementById('householdInput');
+    const autocompleteDropdown = document.getElementById('autocompleteDropdown');
+    const caseForm = document.getElementById('caseForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const casesTableBody = document.getElementById('casesTableBody');
+    
+    // Modal 元素
+    const editModal = document.getElementById('editModal');
+    const modalForm = document.getElementById('modalForm');
+    const modalCaseId = document.getElementById('modalCaseId');
+    const infoHousehold = document.getElementById('infoHousehold');
+    const infoReporter = document.getElementById('infoReporter');
+    const infoPhone = document.getElementById('infoPhone');
+    const infoContent = document.getElementById('infoContent');
+    const modalHandling = document.getElementById('modalHandling');
+    const modalStatus = document.getElementById('modalStatus');
+    const modalConclusion = document.getElementById('modalConclusion');
+
+    // ==========================================
+    // 初始化與 API 連線
+    // ==========================================
+    window.addEventListener('DOMContentLoaded', () => {
+        if (GAS_API_URL.includes("YOUR_GAS_API_URL_HERE")) {
+            showToast("請先在前端原始碼中設定正確的 GAS_API_URL");
+            statusText.innerText = "未配置 API 網址";
+            return;
+        }
+        initSystem();
+    });
+
+    async function initSystem() {
+        try {
+            // 同步獲取戶別主檔與案件紀錄
+            await Promise.all([fetchHouseholds(), fetchCases()]);
+            
+            statusDot.classList.add('online');
+            statusText.innerText = "連線正常 (後台資料庫已就緒)";
+            submitBtn.disabled = false;
+        } catch (error) {
+            console.error("系統初始化失敗:", error);
+            statusText.innerText = "連線失敗，請檢查網路或後端部署";
+            showToast("後台連線異常，請重新整理網頁");
+        }
+    }
+
+    // 撈取 490 戶靜態主檔
+    async function fetchHouseholds() {
+        const response = await fetch(`${GAS_API_URL}?action=getHouseholds`);
+        if (!response.ok) throw new Error("無法讀取戶別資料");
+        householdList = await response.json();
+    }
+
+    // 撈取案件歷史紀錄
+    async function fetchCases() {
+        const response = await fetch(`${GAS_API_URL}?action=getCases`);
+        if (!response.ok) throw new Error("無法讀取案件紀錄");
+        currentCases = await response.json();
+        renderCasesTable(currentCases);
+    }
+
+    // ==========================================
+    // 智能輸入過濾演練 (Autocomplete 核心邏輯)
+    // ==========================================
+    householdInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim().toLowerCase();
+        autocompleteDropdown.innerHTML = '';
+        
+        if (!val) {
+            autocompleteDropdown.style.display = 'none';
+            return;
+        }
+
+        // 模糊搜尋包含關鍵字的戶別
+        const matches = householdList.filter(item => item.toLowerCase().includes(val));
+        
+        if (matches.length === 0) {
+            autocompleteDropdown.innerHTML = `<div class="autocomplete-no-match">無匹配的戶別</div>`;
+        } else {
+            // 最多顯示 15 筆，避免下拉選單過長影響效能與視覺
+            matches.slice(0, 15).forEach(match => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'autocomplete-item';
+                itemDiv.innerText = match;
+                itemDiv.addEventListener('click', () => {
+                    householdInput.value = match;
+                    autocompleteDropdown.style.display = 'none';
+                });
+                autocompleteDropdown.appendChild(itemDiv);
+            });
+        }
+        autocompleteDropdown.style.display = 'block';
+    });
+
+    // 點擊空白處關閉自動辨識下拉選單
+    document.addEventListener('click', (e) => {
+        if (e.target !== householdInput && e.target !== autocompleteDropdown) {
+            autocompleteDropdown.style.display = 'none';
+        }
+    });
+
+    // ==========================================
+    // 案件新增提交
+    // ==========================================
+    caseForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const selectedHousehold = householdInput.value.trim();
+        
+        // 【關鍵防呆】：嚴格驗證輸入值是否落在 490 戶清單之內
+        if (!householdList.includes(selectedHousehold)) {
+            showToast("❌ 錯誤：請務必從輸入建議選單中點選標準的社區戶別！");
+            householdInput.focus();
+            return;
+        }
+
+        const formData = {
+            action: "createCase",
+            data: {
+                household: selectedHousehold,
+                reporter: document.getElementById('reporterInput').value.trim(),
+                phone: document.getElementById('phoneInput').value.trim(),
+                content: document.getElementById('contentInput').value.trim()
+            }
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.innerText = "儲存中...";
+
+        try {
+            const response = await fetch(GAS_API_URL, {
+                method: "POST",
+                mode: "cors",
+                headers: { "Content-Type": "text/plain" }, // 避免 GAS 觸發 OPTIONS 預檢
+                body: JSON.stringify(formData)
+            });
+            
+            const result = await response.json();
+            if (result.status === "success") {
+                showToast("✅ 案件登錄成功！已同步儲存至雲端後台");
+                caseForm.reset();
+                await fetchCases(); // 重新整理列表
+            } else {
+                showToast("❌ 儲存失敗: " + result.message);
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("❌ 網路連線錯誤，請確認後端設定");
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "儲存案件";
+        }
+    });
+
+    // ==========================================
+    // 渲染表格列表
+    // ==========================================
+    function renderCasesTable(cases) {
+        if (cases.length === 0) {
+            casesTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted);">目前尚無任何住戶意見反映紀錄。</td></tr>`;
+            return;
+        }
+
+        casesTableBody.innerHTML = '';
+        cases.forEach(item => {
+            const tr = document.createElement('tr');
+            
+            // 決定狀態 Badge 樣式
+            let badgeClass = 'badge-processing';
+            if (item.進度狀態 === '呈主委') badgeClass = 'badge-chairman';
+            if (item.進度狀態 === '呈管委會') badgeClass = 'badge-committee';
+            if (item.進度狀態 === '結案') badgeClass = 'badge-closed';
+
+            // 格式化時間 (只切到分，排版較乾淨)
+            const timeStr = item.反映時間 ? item.反映時間.substring(0, 16) : '';
+            const updateStr = item.最後更新時間 ? item.最後更新時間.substring(11, 16) : '';
+
+            tr.innerHTML = `
+                <td>\${timeStr}</td>
+                <td><strong>\${item.戶別}</strong></td>
+                <td>\${item.反映人}</td>
+                <td><div class="truncate" title="\${item.反映事項}">\${item.反映事項}</div></td>
+                <td><span class="badge \${badgeClass}">\${item.進度狀態}</span></td>
+                <td style="color:var(--text-muted)">\${updateStr}</td>
+                <td><button class="btn-action" onclick="openEditModal('\${item.案件編號}')">處理</button></td>
+            `;
+            casesTableBody.appendChild(tr);
+        });
+    }
+
+    // ==========================================
+    // 編輯彈出視窗 (Modal) 控制與更新提交
+    // ==========================================
+    window.openEditModal = function(caseId) {
+        const targetCase = currentCases.find(c => c.案件編號 === caseId);
+        if (!targetCase) return;
+
+        // 填入唯讀資訊
+        modalCaseId.value = targetCase.案件編號;
+        infoHousehold.innerText = targetCase.戶別;
+        infoReporter.innerText = targetCase.反映人;
+        infoPhone.innerText = targetCase.連絡電話;
+        infoContent.innerText = targetCase.反映事項;
+
+        // 填入可編輯欄位現有數值
+        modalHandling.value = targetCase.處理方式 || '';
+        modalStatus.value = targetCase.進度狀態 || '處理中';
+        modalConclusion.value = targetCase.案件結論 || '';
+
+        // 開啟 Modal
+        editModal.classList.add('active');
+    };
+
+    function closeModal() {
+        editModal.classList.remove('active');
+        modalForm.reset();
+    }
+
+    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+    document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+
+    modalForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const saveModalBtn = document.getElementById('saveModalBtn');
+        const caseId = modalCaseId.value;
+
+        // 【安全防呆】：如果選擇結案，強制提醒填寫案件結論
+        if (modalStatus.value === '結案' && !modalConclusion.value.trim()) {
+            showToast("⚠️ 提示：狀態改為「結案」時，請務必填寫『案件結論』。");
+            modalConclusion.focus();
+            return;
+        }
+
+        const updateData = {
+            action: "updateCase",
+            data: {
+                caseId: caseId,
+                handling: modalHandling.value.trim(),
+                status: modalStatus.value,
+                conclusion: modalConclusion.value.trim()
+            }
+        };
+
+        saveModalBtn.disabled = true;
+        saveModalBtn.innerText = "更新中...";
+
+        try {
+            const response = await fetch(GAS_API_URL, {
+                method: "POST",
+                mode: "cors",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(updateData)
+            });
+
+            const result = await response.json();
+            if (result.status === "success") {
+                showToast("✨ 案件追蹤狀態更新成功！");
+                closeModal();
+                await fetchCases(); // 刷新追蹤表
+            } else {
+                showToast("❌ 更新失敗: " + result.message);
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("❌ 網路連線失敗，請稍後再試");
+        } finally {
+            saveModalBtn.disabled = false;
+            saveModalBtn.innerText = "更新紀錄";
+        }
+    });
+
+    // ==========================================
+    // 輔助工具：顯示提示通知 (Toast)
+    // ==========================================
+    function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.innerText = message;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, 4000);
+    }
+</script>
+</body>
+</html>
