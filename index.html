@@ -3,469 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>社區住戶意見反映管理系統</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-main: #f1f5f9;
-            --bg-card: #ffffff;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --status-processing: #f59e0b;
-            --status-chairman: #3b82f6;
-            --status-committee: #8b5cf6;
-            --status-closed: #10b981;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft JhengHei", sans-serif; }
-        body { background-color: var(--bg-main); color: var(--text-main); padding: 20px; line-height: 1.5; }
-        .container { max-width: 1300px; margin: 0 auto; }
-
-        header {
-            background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 20px 24px;
-            border-radius: 12px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-        }
-        header h1 { font-size: 24px; font-weight: 700; letter-spacing: 0.05em; }
-        .api-status { font-size: 14px; background-color: rgba(255, 255, 255, 0.1); padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px; }
-        .status-dot { width: 8px; height: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block; }
-        .status-dot.online { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
-
-        .card { background-color: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1); padding: 24px; margin-bottom: 24px; }
-        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1e293b; border-left: 4px solid var(--primary); padding-left: 10px; }
-
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
-        .form-group { position: relative; display: flex; flex-direction: column; gap: 6px; }
-        .form-group.full-width { grid-column: 1 / -1; }
-        label { font-size: 14px; font-weight: 500; color: var(--text-main); }
-        input[type="text"], input[type="tel"], textarea, select { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background-color: #fff; color: var(--text-main); transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
-        textarea { resize: vertical; min-height: 80px; }
-
-        .autocomplete-wrapper { position: relative; }
-        .autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 50; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1); display: none; }
-        .autocomplete-item { padding: 10px 14px; cursor: pointer; font-size: 14px; }
-        .autocomplete-item:hover { background-color: #f1f5f9; color: var(--primary); }
-        .autocomplete-no-match { padding: 10px 14px; color: var(--text-muted); font-size: 14px; font-style: italic; }
-
-        .btn { display: inline-flex; align-items: center; justify-content: center; padding: 10px 20px; font-size: 15px; font-weight: 500; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s ease; }
-        .btn-primary { background-color: var(--primary); color: white; }
-        .btn-primary:hover { background-color: var(--primary-hover); }
-        .btn-primary:disabled { background-color: var(--text-muted); cursor: not-allowed; opacity: 0.6; }
-        .btn-secondary { background-color: #e2e8f0; color: #475569; }
-        .btn-secondary:hover { background-color: #cbd5e1; }
-        .form-actions { display: flex; justify-content: flex-end; }
-
-        .table-responsive { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-        th { background-color: #f8fafc; color: #475569; font-weight: 600; padding: 14px 16px; border-bottom: 2px solid var(--border); white-space: nowrap; }
-        td { padding: 14px 16px; border-bottom: 1px solid var(--border); color: var(--text-main); vertical-align: middle; }
-        tbody tr:hover { background-color: #f8fafc; }
-
-        .badge { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
-        .badge-processing { background-color: #fef3c7; color: #d97706; }
-        .badge-chairman { background-color: #dbeafe; color: #2563eb; }
-        .badge-committee { background-color: #f3e8ff; color: #7c3aed; }
-        .badge-closed { background-color: #d1fae5; color: #059669; }
-
-        .btn-action { padding: 6px 12px; font-size: 13px; border-radius: 4px; background-color: #f1f5f9; border: 1px solid var(--border); color: #334155; cursor: pointer; font-weight: 600; }
-        .btn-action:hover { background-color: var(--primary); color: white; border-color: var(--primary); }
-        .truncate { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.2s ease; }
-        .modal-overlay.active { opacity: 1; visibility: visible; }
-        .modal { background: white; border-radius: 12px; width: 100%; max-width: 600px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); transform: scale(0.95); transition: transform 0.2s ease; max-height: 90vh; display: flex; flex-direction: column; }
-        .modal-overlay.active .modal { transform: scale(1); }
-        .modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .modal-header h3 { font-size: 18px; font-weight: 600; }
-        .close-modal { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-muted); }
-        .modal-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
-        .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 12px; background-color: #f8fafc; border-radius: 0 0 12px 12px; }
-
-        .info-block { background-color: #f8fafc; padding: 12px 16px; border-radius: 6px; border: 1px solid var(--border); font-size: 14px; }
-        .info-row { display: flex; margin-bottom: 6px; }
-        .info-row:last-child { margin-bottom: 0; }
-        .info-label { font-weight: 600; color: var(--text-muted); width: 90px; flex-shrink: 0; }
-
-        .toast { position: fixed; bottom: 24px; right: 24px; background-color: #334155; color: white; padding: 12px 24px; border-radius: 6px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3); z-index: 2000; font-size: 14px; display: none; }
-        .loading-spinner { text-align: center; padding: 40px; color: var(--text-muted); font-style: italic; }
-    </style>
+    <title>公告設定面板 V1.10 geminiPro</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="app-container">
+        <!-- 左側控制面板開始 -->
+        <div class="control-panel">
+            <h2>公告設定面板 V1.10 geminiPro</h2>
+            
+            <div class="form-group">
+                <label>公告類別 (標題後綴)</label>
+                <select id="doc-type">
+                    <option value="公告">一般公告</option>
+                    <option value="緊急公告">緊急公告</option>
+                    <option value="提醒公告">提醒公告</option>
+                </select>
+            </div>
 
-<div class="container">
-    <header>
-        <h1>社區住戶意見反映管理系統</h1>
-        <div class="api-status">
-            <span id="statusDot" class="status-dot"></span>
-            <span id="statusText">系統載入中...</span>
-        </div>
-    </header>
+            <div class="form-group">
+                <label>簡要標題 <span class="hint" id="title-hint">(最多 15 字)</span></label>
+                <select id="doc-title-select" style="margin-bottom: 8px;"></select>
+                <input type="text" id="doc-title-custom" placeholder="請由上方選擇或在此直接輸入/修改標題..." maxlength="15">
+            </div>
 
-    <section class="card">
-        <div class="card-title">新增意見反映案件</div>
-        <form id="caseForm">
-            <div class="form-grid">
-                <div class="form-group autocomplete-wrapper">
-                    <label for="householdInput">戶別 <span style="color:red">*</span></label>
-                    <input type="text" id="householdInput" placeholder="輸入關鍵字自動辨識" autocomplete="off" required>
-                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>公告日期</label>
+                    <input type="date" id="start-date">
                 </div>
                 <div class="form-group">
-                    <label for="reporterInput">反映人 <span style="color:red">*</span></label>
-                    <input type="text" id="reporterInput" placeholder="請輸入姓名/稱呼" required>
-                </div>
-                <div class="form-group">
-                    <label for="phoneInput">連絡電話 <span style="color:red">*</span></label>
-                    <input type="tel" id="phoneInput" placeholder="請輸入聯絡電話" required>
-                </div>
-                <div class="form-group">
-                    <label for="operatorInput">案件輸入人 <span style="color:red">*</span></label>
-                    <input type="text" id="operatorInput" placeholder="當班登錄人員姓名" required>
-                </div>
-                <div class="form-group full-width">
-                    <label for="contentInput">反映事項 <span style="color:red">*</span></label>
-                    <textarea id="contentInput" placeholder="請詳細錄入反映的具體事項內容..." required></textarea>
+                    <label>截止日期</label>
+                    <input type="date" id="end-date">
                 </div>
             </div>
-            <div class="form-actions">
-                <button type="submit" id="submitBtn" class="btn btn-primary" disabled>儲存案件</button>
+
+            <div class="form-group">
+                <label>公告字號</label>
+                <!-- 已經由 JS 鎖定反灰，由後台自動生成 -->
+                <input type="text" id="doc-serial" placeholder="載入中...">
             </div>
-        </form>
-    </section>
 
-    <section class="card">
-        <div class="card-title">意見反映案件追蹤總表</div>
-        <div class="table-responsive">
-            <table id="casesTable">
-                <thead>
-                    <tr>
-                        <th>反映時間</th>
-                        <th>戶別</th>
-                        <th>反映人</th>
-                        <th>案件輸入人</th>
-                        <th style="width: 25%;">反映事項</th>
-                        <th>進度狀態</th>
-                        <th>最後更新</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody id="casesTableBody">
-                    <tr>
-                        <td colspan="8" class="loading-spinner">正在自後台連線讀取案件紀錄...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </section>
-</div>
+            <hr>
 
-<div id="editModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>案件進度追蹤處理</h3>
-            <button class="close-modal" id="closeModalBtn">&times;</button>
-        </div>
-        <form id="modalForm">
-            <input type="hidden" id="modalCaseId">
-            <div class="modal-body">
-                <div class="info-block">
-                    <div class="info-row"><span class="info-label">戶別：</span><span id="infoHousehold"></span></div>
-                    <div class="info-row"><span class="info-label">反映人：</span><span id="infoReporter"></span> (<span id="infoPhone"></span>)</div>
-                    <div class="info-row"><span class="info-label">案件輸入人：</span><span id="infoOperator"></span></div>
-                    <div class="info-row"><span class="info-label">反映事項：</span><span id="infoContent"></span></div>
+            <h3 style="color: var(--primary-color); margin-bottom: 10px;">📄 核心內容設定區</h3>
+            
+            <div class="smart-item-group">
+                <label class="group-title"><input type="checkbox" id="chk-p1" checked> 1. 依據與緣由</label>
+                <div class="sub-items" id="sub-p1">
+                    <label><input type="checkbox" id="chk-p1-1"> 本社區規約 第 <input type="text" id="p1-1-v1" class="inline-input short"> 條 <input type="text" id="p1-1-v2" class="inline-input long" placeholder="內容說明..."></label>
+                    <label><input type="checkbox" id="chk-p1-2"> 本社區 <input type="text" id="p1-2-v1" class="inline-input medium"> 管理辦法第 <input type="text" id="p1-2-v2" class="inline-input short"> 條 <input type="text" id="p1-2-v3" class="inline-input long" placeholder="內容說明..."></label>
+                    <label><input type="checkbox" id="chk-p1-3"> 第 <input type="text" id="p1-3-v1" class="inline-input short"> 屆第 <input type="text" id="p1-3-v2" class="inline-input short"> 次區權會 <input type="text" id="p1-3-v3" class="inline-input medium"> 決議辦理</label>
+                    <label><input type="checkbox" id="chk-p1-4"> 第 <input type="text" id="p1-4-v1" class="inline-input short"> 屆第 <input type="text" id="p1-4-v2" class="inline-input short"> 次管委會 <input type="text" id="p1-4-v3" class="inline-input medium"> 決議辦理</label>
+                    <label><input type="checkbox" id="chk-p1-5"> 主管機關 <input type="text" id="p1-5-v1" class="inline-input long"> 函文辦理</label>
+                    <label><input type="checkbox" id="chk-p1-custom"> 自訂補充依據：<input type="text" id="p1-custom-v1" class="inline-input long" placeholder="請自行輸入依據或緣由說明..."></label>
                 </div>
-                <div class="form-group">
-                    <label for="modalHandling">處理方式紀錄 (可持續追蹤累加)</label>
-                    <textarea id="modalHandling" placeholder="請輸入目前採取的處理步驟、聯絡狀況或交辦進度..."></textarea>
+            </div>
+
+            <div class="smart-item-group">
+                <label class="group-title"><input type="checkbox" id="chk-p2" checked> 2. 執行時間與地點</label>
+                <div class="sub-items" id="sub-p2">
+                    <div style="margin-bottom: 5px;">日期時間：<input type="text" id="p2-time" class="inline-input long" placeholder="例如：113年5月1日 09:00-12:00"></div>
+                    <div>執行地點：<input type="text" id="p2-loc" class="inline-input long" placeholder="例如：各棟頂樓與地下室"></div>
                 </div>
-                <div class="form-group">
-                    <label for="modalStatus">進度狀態變更</label>
-                    <select id="modalStatus">
-                        <option value="處理中">處理中</option>
-                        <option value="呈主委">呈主委</option>
-                        <option value="呈管委會">呈管委會</option>
-                        <option value="結案">結案</option>
+            </div>
+
+            <div class="smart-item-group">
+                <label class="group-title"><input type="checkbox" id="chk-p3" checked> 3. 作業細節</label>
+                <div class="sub-items" id="sub-p3">
+                    <select id="p3-cat" style="margin-bottom: 5px;">
+                        <option value="">請選擇細節主類別...</option>
+                        <option value="行政/車位類">【行政/車位類】</option>
+                        <option value="維修/施工類">【維修/施工類】</option>
+                        <option value="宣導/違規類">【宣導/違規類】</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="modalConclusion">案件結論 (結案時之最終處置)</label>
-                    <textarea id="modalConclusion" placeholder="當案件進入「結案」階段時，請在此填寫最終辦理結果摘要..."></textarea>
+                    
+                    <select id="p3-template" style="margin-bottom: 8px; display: none;">
+                        <option value="">-- 請選擇範本內容 (可留空自打) --</option>
+                    </select>
+
+                    <div class="editor-toolbar">
+                        <select id="btn-fontsize" title="文字大小" class="editor-select">
+                            <option value="">大小</option>
+                            <option value="0.8em">小字</option>
+                            <option value="1em">標準</option>
+                            <option value="1.25em">中大</option>
+                            <option value="1.5em">特大</option>
+                        </select>
+                        <button type="button" id="btn-bold" title="粗體"><b>B</b></button>
+                        <button type="button" id="btn-red" title="紅字" style="color: #cc0000;"><b>A</b></button>
+                        <span class="hint" style="margin-left: auto; font-size: 11px;">選取文字後操作</span>
+                    </div>
+                    <div id="p3-editor" contenteditable="true" placeholder="請填寫作業細節說明，可使用上方工具標示粗體、紅字或放大縮小..."></div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" id="cancelModalBtn">取消</button>
-                <button type="submit" class="btn btn-primary" id="saveModalBtn">更新紀錄</button>
+
+            <hr>
+
+            <h3 style="color: var(--primary-color); margin-bottom: 10px;">🔔 提醒與附件區</h3>
+            
+            <!-- 【整合後的附件上傳區塊】 -->
+            <div class="form-group" style="background: #fff; border: 1px solid var(--border-color); padding: 10px; border-radius: 4px;">
+                <label>📁 上傳附件 (圖片/PDF) - <span style="color: var(--primary-color);">將直接合併於底圖</span></label>
+                <input type="file" id="attachment-input" accept="image/*,application/pdf">
+                <p class="hint" style="margin: 4px 0 12px 0;">單頁圖片將自動貼在 A4 下方空位；PDF 或多頁則改為文字勾選提醒。</p>
+                
+                <label style="border-top: 1px dashed #ccc; padding-top: 12px; margin-top: 5px;">📁 相關文件 - <span style="color: var(--primary-color);">隨公告發布歸檔 (不印在底圖上)</span></label>
+                <input type="file" id="related-doc-input">
             </div>
-        </form>
+            <!-- 【區塊結束】 -->
+
+            <div class="smart-item-group alert-box">
+                <label><input type="checkbox" id="chk-rem1" checked> <b>配合事項：</b>懇請住戶協助配合辦理...</label>
+                <label><input type="checkbox" id="chk-rem2" checked> <b>致歉語一：</b>施工期間若造成不便...</label>
+                <label><input type="checkbox" id="chk-rem3" checked> <b>致歉語二：</b>測試期間若造成不便...</label>
+                <label style="margin-top: 5px; border-top: 1px dashed #ccc; padding-top: 5px;">
+                    <input type="checkbox" id="chk-att"> <b>附件：</b>詳見後附之相關文件 (含相片/PDF)
+                </label>
+            </div>
+            
+            <div class="form-group" style="margin-top: 15px;">
+                <label>中間內容字體微調 (輸入數字)</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="zoom-number" min="14" max="80" step="1" value="18" style="width: 80px; padding: 6px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 14px;">
+                    <span style="font-weight: bold; font-size: 14px;">px</span>
+                </div>
+            </div>
+
+            <button id="print-btn" class="primary-btn">列印 / 存成 PDF</button>
+        </div> 
+        <!-- 左側控制面板結束 -->
+
+        <!-- 右側預覽面板開始 -->
+        <div class="preview-panel">
+            <div class="a4-canvas" id="a4-canvas">
+                <div class="content-wrapper">
+                    <div class="header-section">
+                        <div class="title-container">
+                            <h1 class="main-title"><span id="preview-title">請輸入標題</span> (<span id="preview-type">公告</span>)</h1>
+                        </div>
+                        <div class="sub-info">
+                            <span>公告日期：<span id="preview-start-date">___年__月__日</span></span>
+                            <span>公告截止：<span id="preview-end-date">___年__月__日</span></span>
+                            <span>公告字號：<span id="preview-serial">_______________</span></span>
+                        </div>
+                    </div>
+                    
+                    <div class="body-section" id="preview-body-section">
+                        <div id="preview-content" class="text-content"></div>
+                        
+                        <div id="preview-attachment-container"></div>
+                    </div>
+
+                    <div class="footer-section">
+                        <p class="contact-text">任何問題請聯絡管理中心 02-86463220</p>
+                        <div class="stamp">東方桂冠<br>管理中心<br>確認章</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 右側預覽面板結束 -->
     </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script>
-    // ==========================================
-    // ⚠️ 請在此處貼上您重新部署後的 GAS 網頁應用程式網址
-    // ==========================================
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyjFzv0r0Gs9BGHdbXbbgpHtxXX3DjVL3S0WTVvHRuVl29C12I3Ze1MCREBnvOp9ugb2A/exec";
-
-    let householdList = []; 
-    let currentCases = [];   
-
-    const statusDot = document.getElementById('statusDot');
-    const statusText = document.getElementById('statusText');
-    const householdInput = document.getElementById('householdInput');
-    const autocompleteDropdown = document.getElementById('autocompleteDropdown');
-    const caseForm = document.getElementById('caseForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const casesTableBody = document.getElementById('casesTableBody');
     
-    const editModal = document.getElementById('editModal');
-    const modalForm = document.getElementById('modalForm');
-    const modalCaseId = document.getElementById('modalCaseId');
-    const infoHousehold = document.getElementById('infoHousehold');
-    const infoReporter = document.getElementById('infoReporter');
-    const infoPhone = document.getElementById('infoPhone');
-    const infoOperator = document.getElementById('infoOperator');
-    const infoContent = document.getElementById('infoContent');
-    const modalHandling = document.getElementById('modalHandling');
-    const modalStatus = document.getElementById('modalStatus');
-    const modalConclusion = document.getElementById('modalConclusion');
-
-    window.addEventListener('DOMContentLoaded', () => {
-        if (GAS_API_URL.includes("YOUR_GAS_API_URL_HERE")) {
-            showToast("請先在原始碼中設定正確的 GAS_API_URL");
-            statusText.innerText = "未配置 API 網址";
-            return;
-        }
-        initSystem();
-    });
-
-    async function initSystem() {
-        try {
-            await Promise.all([fetchHouseholds(), fetchCases()]);
-            statusDot.classList.add('online');
-            statusText.innerText = "連線正常 (後台資料庫已就緒)";
-            submitBtn.disabled = false;
-        } catch (error) {
-            console.error(error);
-            statusText.innerText = "連線失敗，請檢查網路或後端部署";
-            showToast("後台連線異常，請重新整理網頁");
-        }
-    }
-
-    async function fetchHouseholds() {
-        const response = await fetch(`${GAS_API_URL}?action=getHouseholds`);
-        householdList = await response.json();
-    }
-
-    async function fetchCases() {
-        const response = await fetch(`${GAS_API_URL}?action=getCases`);
-        currentCases = await response.json();
-        renderCasesTable(currentCases);
-    }
-
-    // 戶別自動辨識過濾
-    householdInput.addEventListener('input', (e) => {
-        const val = e.target.value.trim().toLowerCase();
-        autocompleteDropdown.innerHTML = '';
-        if (!val) { autocompleteDropdown.style.display = 'none'; return; }
-
-        const matches = householdList.filter(item => item.toLowerCase().includes(val));
-        if (matches.length === 0) {
-            autocompleteDropdown.innerHTML = `<div class="autocomplete-no-match">無匹配的戶別</div>`;
-        } else {
-            matches.slice(0, 15).forEach(match => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'autocomplete-item';
-                itemDiv.innerText = match;
-                itemDiv.addEventListener('click', () => {
-                    householdInput.value = match;
-                    autocompleteDropdown.style.display = 'none';
-                });
-                autocompleteDropdown.appendChild(itemDiv);
-            });
-        }
-        autocompleteDropdown.style.display = 'block';
-    });
-
-    document.addEventListener('click', (e) => {
-        if (e.target !== householdInput && e.target !== autocompleteDropdown) {
-            autocompleteDropdown.style.display = 'none';
-        }
-    });
-
-    // 表單提交 (新增案件)
-    caseForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const selectedHousehold = householdInput.value.trim();
-        
-        if (!householdList.includes(selectedHousehold)) {
-            showToast("❌ 錯誤：請務必從輸入建議選單中點選標準的社區戶別！");
-            householdInput.focus();
-            return;
-        }
-
-        const formData = {
-            action: "createCase",
-            data: {
-                household: selectedHousehold,
-                reporter: document.getElementById('reporterInput').value.trim(),
-                phone: document.getElementById('phoneInput').value.trim(),
-                operator: document.getElementById('operatorInput').value.trim(), // 傳送輸入人
-                content: document.getElementById('contentInput').value.trim()
-            }
-        };
-
-        submitBtn.disabled = true;
-        submitBtn.innerText = "儲存中...";
-
-        try {
-            const response = await fetch(GAS_API_URL, {
-                method: "POST",
-                mode: "cors",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify(formData)
-            });
-            const result = await response.json();
-            if (result.status === "success") {
-                showToast("✅ 案件登錄成功！已同步儲存至雲端後台");
-                // 僅清空部分欄位，保留「案件輸入人」方便當班人員連續輸入
-                householdInput.value = '';
-                document.getElementById('reporterInput').value = '';
-                document.getElementById('phoneInput').value = '';
-                document.getElementById('contentInput').value = '';
-                await fetchCases();
-            } else {
-                showToast("❌ 儲存失敗: " + result.message);
-            }
-        } catch (error) {
-            showToast("❌ 網路連線錯誤，請確認後端設定");
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = "儲存案件";
-        }
-    });
-
-    // 渲染資料表
-    function renderCasesTable(cases) {
-        if (cases.length === 0) {
-            casesTableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--text-muted);">目前尚無任何住戶意見反映紀錄。</td></tr>`;
-            return;
-        }
-
-        casesTableBody.innerHTML = '';
-        cases.forEach(item => {
-            const tr = document.createElement('tr');
-            let badgeClass = 'badge-processing';
-            if (item.進度狀態 === '呈主委') badgeClass = 'badge-chairman';
-            if (item.進度狀態 === '呈管委會') badgeClass = 'badge-committee';
-            if (item.進度狀態 === '結案') badgeClass = 'badge-closed';
-
-            const timeStr = item.反映時間 ? item.反映時間.substring(0, 16) : '';
-            const updateStr = item.最後更新時間 ? item.最後更新時間.substring(11, 16) : '';
-
-            // 使用 data-id 儲存不重複案件編號，完全移除內聯 javascript 字串拼接
-            tr.innerHTML = `
-                <td>${timeStr}</td>
-                <td><strong>${item.戶別}</strong></td>
-                <td>${item.反映人}</td>
-                <td>${item.案件輸入人 || ''}</td>
-                <td><div class="truncate" title="${item.反映事項}">${item.反映事項}</div></td>
-                <td><span class="badge ${badgeClass}">${item.進度狀態}</span></td>
-                <td style="color:var(--text-muted)">${updateStr}</td>
-                <td><button class="btn-action" data-id="${item.案件編號}">處理</button></td>
-            `;
-            casesTableBody.appendChild(tr);
-        });
-    }
-
-    // ==========================================
-    // 💡 修正核心：改用安全穩健的事件委派偵聽 (Event Delegation)
-    // ==========================================
-    casesTableBody.addEventListener('click', (e) => {
-        const actionBtn = e.target.closest('.btn-action');
-        if (!actionBtn) return; // 如果點擊的不是「處理」按鈕則不反應
-
-        const caseId = actionBtn.getAttribute('data-id');
-        const targetCase = currentCases.find(c => c.案件編號 === caseId);
-        if (!targetCase) return;
-
-        // 載入資料至 Modal 欄位
-        modalCaseId.value = targetCase.案件編號;
-        infoHousehold.innerText = targetCase.戶別;
-        infoReporter.innerText = targetCase.反映人;
-        infoPhone.innerText = targetCase.連絡電話;
-        infoOperator.innerText = targetCase.案件輸入人 || '未記錄';
-        infoContent.innerText = targetCase.反映事項;
-
-        modalHandling.value = targetCase.處理方式 || '';
-        modalStatus.value = targetCase.進度狀態 || '處理中';
-        modalConclusion.value = targetCase.案件結論 || '';
-
-        // 開啟燈箱
-        editModal.classList.add('active');
-    });
-
-    function closeModal() { editModal.classList.remove('active'); modalForm.reset(); }
-    document.getElementById('closeModalBtn').addEventListener('click', closeModal);
-    document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
-
-    // 燈箱提交 (更新進度)
-    modalForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const saveModalBtn = document.getElementById('saveModalBtn');
-        
-        if (modalStatus.value === '結案' && !modalConclusion.value.trim()) {
-            showToast("⚠️ 提示：狀態改為「結案」時，請務必填寫『案件結論』。");
-            modalConclusion.focus();
-            return;
-        }
-
-        const updateData = {
-            action: "updateCase",
-            data: {
-                caseId: modalCaseId.value,
-                handling: modalHandling.value.trim(),
-                status: modalStatus.value,
-                conclusion: modalConclusion.value.trim()
-            }
-        };
-
-        saveModalBtn.disabled = true;
-        saveModalBtn.innerText = "更新中...";
-
-        try {
-            const response = await fetch(GAS_API_URL, {
-                method: "POST",
-                mode: "cors",
-                headers: { "Content-Type": "text/plain" },
-                body: JSON.stringify(updateData)
-            });
-            const result = await response.json();
-            if (result.status === "success") {
-                showToast("✨ 案件追蹤狀態更新成功！");
-                closeModal();
-                await fetchCases();
-            } else {
-                showToast("❌ 更新失敗: " + result.message);
-            }
-        } catch (error) {
-            showToast("❌ 網路連線失敗，請稍後再試");
-        } finally {
-            saveModalBtn.disabled = false;
-            saveModalBtn.innerText = "更新紀錄";
-        }
-    });
-
-    function showToast(message) {
-        const toast = document.getElementById('toast');
-        toast.innerText = message;
-        toast.style.display = 'block';
-        setTimeout(() => { toast.style.display = 'none'; }, 4000);
-    }
-</script>
+    <!-- 載入外部 JS -->
+    <script src="script.js"></script>
 </body>
 </html>
